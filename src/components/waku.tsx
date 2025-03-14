@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useWakuContext } from "../hooks/useWaku";
-import { createEncoder, IMessage, utf8ToBytes } from "@waku/sdk";
+import { bytesToUtf8, createDecoder, createEncoder, IMessage, utf8ToBytes } from "@waku/sdk";
 
 
 const Waku = () => {
@@ -8,6 +8,7 @@ const Waku = () => {
     const [peers, setPeers] = useState<string[]>([])
 
     const [text, setText] = useState<string>()
+    const [historicalMessages, setHistoricalMessages] = useState<string[]>([])
 
     
     useEffect(() => {
@@ -31,12 +32,38 @@ const Waku = () => {
 
         console.log(await node.lightPush?.send(encoder, message))
     }
+
+    const query = async () => {
+        if (!node || !connected || !node.store) return
+
+        const decoder = createDecoder("/example/1/foo/plain", {clusterId: 42, shard: 0})
+
+
+        for await (const messagesPromises of node.store.queryGenerator(
+            [decoder],
+            //options
+        )) {
+            await Promise.all(
+                messagesPromises
+                    .map(async (p) => {
+                        const msg = await p;
+                        if (msg)
+                            console.log(bytesToUtf8(msg.payload))
+                            setHistoricalMessages((msgs) => [...msgs, bytesToUtf8(msg!.payload)])
+
+                    })
+            );
+        }
+
+    }
     return (
         <div>
             <div>Peers: {peers}</div>
             <div>Health: {health}</div>
             <div><input type="text" onChange={(e) => setText(e.target.value)}/></div>
             <div><button onClick={publish}>Send</button></div>
+            <div><button onClick={query}>Query Store</button></div>
+            <div>{historicalMessages.map((msg) => <div>{msg}</div>)}</div>
         </div>
     )
 }

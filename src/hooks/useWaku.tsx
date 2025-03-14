@@ -52,8 +52,6 @@ interface Props {
     children: React.ReactNode
 }
 
-
-
 export const WakuContextProvider = ({ children, updateStatus }: Props) => {
     const [status, setStatus] = useState<string>("disconnected")
     const [connected, setConnected] = useState<boolean>(false)
